@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI智能助手</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>类脑通知文档测试</h1>
+            <p></p>
+        </header>
+
+        <main class="chat-container">
+            <div id="chatMessages" class="chat-messages">
+                <div class="message ai-message">
+                    <div class="message-avatar">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                            <path d="M2 17L12 22L22 17"/>
+                            <path d="M2 12L12 17L22 12"/>
+                        </svg>
+                    </div>
+                    <div class="message-content">
+                        <div class="welcome-content">
+                            <h3>👋 您好！我是您的AI智能助手</h3>
+                            <p class="welcome-subtitle">我会直接回答、展示文档提取内容(逻辑在dify)、直接上传文档问我文档相关内容 </p>
+                          </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <div class="mode-selector">
+                    <label for="modeSelect">对话模式：</label>
+                    <select id="modeSelect" class="mode-select">
+                        <option value="1">正常沟通</option>
+                        <option value="2">展示提取返回内容</option>
+                        <option value="3">直接测试文档返回</option>
+                    </select>
+                </div>
+                
+                <div class="input-wrapper">
+                    <div class="input-actions">
+                        <button id="uploadButton" class="upload-button" title="上传文档">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            <span class="upload-badge" id="uploadBadge" style="display: none;">0</span>
+                        </button>
+                        <input type="file" id="fileInput" class="file-input" accept=".pdf,.doc,.docx,.txt,.md,.json,.csv" multiple>
+                    </div>
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="输入您的问题..." 
+                        rows="1"
+                        maxlength="4000"
+                    ></textarea>
+                    <button id="sendButton" class="send-button">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-info">
+                    <span class="char-count">0 / 4000</span>
+                    <span class="file-count" id="fileCount" style="display: none;">已选择 <span id="selectedFileCount">0</span> 个文件</span>
+                </div>
+                
+                <!-- 文件上传弹窗 -->
+                <div id="uploadModal" class="upload-modal">
+                    <div class="upload-modal-content">
+                        <div class="upload-modal-header">
+                            <h3>上传文件</h3>
+                            <button class="upload-modal-close" id="uploadModalClose">✕</button>
+                        </div>
+                        <div class="upload-modal-body">
+                            <div class="upload-zone" id="uploadZone">
+                                <div class="upload-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="7 10 12 15 17 10"/>
+                                        <line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                </div>
+                                <div class="upload-text">
+                                    <div class="upload-title">拖拽文件到此处或点击上传</div>
+                                    <div class="upload-subtitle">支持 PDF、DOC、DOCX、TXT、MD、JSON、CSV 等格式</div>
+                                </div>
+                                <input type="file" id="fileInputModal" class="file-input" accept=".pdf,.doc,.docx,.txt,.md,.json,.csv" multiple>
+                            </div>
+                            <div class="upload-progress" id="uploadProgress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <span class="progress-text" id="progressText">0%</span>
+                            </div>
+                            <div class="uploaded-files" id="uploadedFiles" style="display: none;">
+                                <div class="files-header">已上传文件：</div>
+                                <div class="files-list" id="filesList"></div>
+                            </div>
+                        </div>
+                        <div class="upload-modal-footer">
+                            <button class="upload-modal-btn" id="uploadModalBtn">完成上传</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="thinkingModal" class="thinking-modal">
+            <div class="thinking-content">
+                <div class="thinking-spinner"></div>
+                <p>AI正在思考中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const uploadButton = document.getElementById('uploadButton');
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const uploadedFiles = document.getElementById('uploadedFiles');
+        const filesList = document.getElementById('filesList');
+        const fileCount = document.getElementById('fileCount');
+        const selectedFileCount = document.getElementById('selectedFileCount');
+        const thinkingModal = document.getElementById('thinkingModal');
+        const charCount = document.querySelector('.char-count');
+        const modeSelect = document.getElementById('modeSelect');
+        const uploadModal = document.getElementById('uploadModal');
+        const uploadModalClose = document.getElementById('uploadModalClose');
+        const uploadModalBtn = document.getElementById('uploadModalBtn');
+        const fileInputModal = document.getElementById('fileInputModal');
+        const uploadBadge = document.getElementById('uploadBadge');
+        
+        let uploadedFilesList = [];
+        let isUploading = false;
+
+        // 文件上传功能
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'pdf': '📄',
+                'doc': '📝',
+                'docx': '📝',
+                'txt': '📃',
+                'md': '📋',
+                'json': '📊',
+                'csv': '📈'
+            };
+            return icons[ext] || '📎';
+        }
+
+        function updateFileList() {
+            filesList.innerHTML = '';
+            uploadedFilesList.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <span class="file-icon">${getFileIcon(file.name)}</span>
+                        <span class="file-name" title="${file.name}">${file.name}</span>
+                        <span class="file-size">${formatFileSize(file.size)}</span>
+                    </div>
+                    <span class="file-remove" onclick="removeFile(${index})" title="删除文件">✕</span>
+                `;
+                filesList.appendChild(fileItem);
+            });
+
+            // 更新上传按钮的徽章
+            if (uploadedFilesList.length > 0) {
+                uploadBadge.textContent = uploadedFilesList.length;
+                uploadBadge.style.display = 'flex';
+                fileCount.style.display = 'block';
+                selectedFileCount.textContent = uploadedFilesList.length;
+                uploadedFiles.style.display = 'block';
+            } else {
+                uploadBadge.style.display = 'none';
+                fileCount.style.display = 'none';
+                uploadedFiles.style.display = 'none';
+            }
+        }
+
+        function removeFile(index) {
+            uploadedFilesList.splice(index, 1);
+            updateFileList();
+        }
+
+        function showUploadModal() {
+            uploadModal.style.display = 'flex';
+        }
+
+        function hideUploadModal() {
+            uploadModal.style.display = 'none';
+        }
+
+        async function uploadFiles(files) {
+            if (isUploading) return;
+            
+            isUploading = true;
+            uploadProgress.style.display = 'flex';
+            uploadZone.style.display = 'none';
+            
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                // 进度监听
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressFill.style.width = percent + '%';
+                        progressText.textContent = percent + '%';
+                    }
+                });
+                
+                // 完成监听
+                xhr.addEventListener('load', function() {
+                    if (xhr.status === 200) {
+                        const result = JSON.parse(xhr.responseText);
+                        
+                        // 将上传成功的文件添加到列表
+                        result.urls.forEach((url, index) => {
+                            uploadedFilesList.push({
+                                name: files[index].name,
+                                size: files[index].size,
+                                url: url
+                            });
+                        });
+
+                        updateFileList();
+                        
+                        // 重置上传区域
+                        uploadProgress.style.display = 'none';
+                        uploadZone.style.display = 'block';
+                        fileInputModal.value = '';
+                        
+                        // 重置进度条
+                        progressFill.style.width = '0%';
+                        progressText.textContent = '0%';
+                    } else {
+                        throw new Error('上传失败');
+                    }
+                });
+                
+                // 错误监听
+                xhr.addEventListener('error', function() {
+                    throw new Error('网络错误');
+                });
+                
+                // 发送请求
+                xhr.open('POST', '/upload', true);
+                xhr.send(formData);
+                
+            } catch (error) {
+                console.error('上传失败:', error);
+                uploadProgress.style.display = 'none';
+                uploadZone.style.display = 'block';
+                alert('文件上传失败，请重试');
+                
+                // 重置进度条
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+            } finally {
+                isUploading = false;
+            }
+        }
+
+        // 文件选择事件
+        fileInputModal.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length > 0) {
+                uploadFiles(files);
+            }
+        });
+
+        // 上传按钮点击事件
+        uploadButton.addEventListener('click', function() {
+            showUploadModal();
+        });
+
+        // 弹窗关闭事件
+        uploadModalClose.addEventListener('click', function() {
+            hideUploadModal();
+        });
+
+        uploadModalBtn.addEventListener('click', function() {
+            hideUploadModal();
+        });
+
+        // 点击弹窗外部关闭
+        uploadModal.addEventListener('click', function(e) {
+            if (e.target === uploadModal) {
+                hideUploadModal();
+            }
+        });
+
+        // 拖拽上传
+        uploadZone.addEventListener('click', function() {
+            fileInputModal.click();
+        });
+
+        uploadZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = Array.from(e.dataTransfer.files);
+            const validFiles = files.filter(file => {
+                const validTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.json', '.csv'];
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                return validTypes.includes(ext);
+            });
+
+            if (validFiles.length > 0) {
+                uploadFiles(validFiles);
+            } else {
+                alert('请上传支持的文件格式：PDF、DOC、DOCX、TXT、MD、JSON、CSV');
+            }
+        });
+
+        // 自动调整textarea高度
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            
+            // 更新字符计数
+            charCount.textContent = `${this.value.length} / 4000`;
+        });
+
+        // 发送消息
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message && uploadedFilesList.length === 0) return;
+
+            // 获取上传文件的URL
+            const fileUrls = uploadedFilesList.map(file => file.url);
+            
+            // 添加用户消息
+            let userMessage = message;
+            if (uploadedFilesList.length > 0) {
+                const fileNames = uploadedFilesList.map(file => file.name).join(', ');
+                userMessage += `\n\n📎 附件: ${fileNames}`;
+            }
+            addMessage(userMessage, 'user');
+            
+            // 清空输入框和文件列表
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            charCount.textContent = '0 / 4000';
+            uploadedFilesList = [];
+            updateFileList();
+            
+            // 创建AI消息容器
+            const aiMessageDiv = document.createElement('div');
+            aiMessageDiv.className = 'message ai-message';
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                    <path d="M2 17L12 22L22 17"/>
+                    <path d="M2 12L12 17L22 12"/>
+                </svg>
+            `;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            const thinkDiv = document.createElement('div');
+            thinkDiv.className = 'think-content';
+            thinkDiv.style.display = 'none';
+            
+            // 创建折叠式的think内容
+            const thinkHeader = document.createElement('div');
+            thinkHeader.className = 'think-header';
+            thinkHeader.innerHTML = '<strong>🤔 思考内容</strong><span class="think-toggle">▼</span>';
+            
+            const thinkBody = document.createElement('div');
+            thinkBody.className = 'think-body';
+            thinkBody.style.display = 'none';
+            
+            thinkDiv.appendChild(thinkHeader);
+            thinkDiv.appendChild(thinkBody);
+            
+            // 只创建答案显示区域，不创建额外的段落
+            const answerDisplay = document.createElement('div');
+            answerDisplay.style.whiteSpace = 'pre-wrap';
+            answerDisplay.style.wordWrap = 'break-word';
+            answerDisplay.innerHTML = '';
+            
+            // 添加思考状态指示器
+            const thinkingIndicator = document.createElement('div');
+            thinkingIndicator.className = 'thinking-indicator';
+            thinkingIndicator.innerHTML = `
+                <div class="thinking-dots">
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                </div>
+                <div class="thinking-text">AI正在思考中...</div>
+            `;
+            
+            messageContent.appendChild(thinkDiv);
+            messageContent.appendChild(thinkingIndicator);
+            messageContent.appendChild(answerDisplay);
+            
+            // 添加点击事件
+            thinkHeader.addEventListener('click', function() {
+                const isExpanded = thinkBody.style.display !== 'none';
+                thinkBody.style.display = isExpanded ? 'none' : 'block';
+                thinkDiv.querySelector('.think-toggle').textContent = isExpanded ? '▼' : '▲';
+            });
+            aiMessageDiv.appendChild(avatar);
+            aiMessageDiv.appendChild(messageContent);
+            
+            chatMessages.appendChild(aiMessageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            try {
+                console.log('Sending message:', message);
+                const requestData = {
+                    query: message,
+                    user: 'user-' + Date.now(),
+                    inputs: {
+                        classification: modeSelect.value
+                    }
+                };
+                
+                // 如果有文件URL，添加到请求中
+                if (fileUrls.length > 0) {
+                    requestData.inputs.url = fileUrls[0];
+                }
+                
+                // 隐藏思考指示器，显示正在接收响应
+                thinkingIndicator.style.display = 'flex';
+                
+                const response = await fetch('http://localhost:5001/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                console.log('Response status:', response.status);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let thinkContent = '';
+                let answerContent = '';
+                let thinkDisplayBuffer = '';
+                let answerDisplayBuffer = '';
+                let isInThink = false;
+                let thinkTagBuffer = '';
+                let answerTagBuffer = '';
+                
+                console.log('Starting to read stream...');
+                
+                // 思考指示器保持显示，等待实际内容到达
+                
+                // 添加超时处理
+                const timeout = setTimeout(() => {
+                    if (thinkingIndicator.style.display !== 'none') {
+                        thinkingIndicator.style.display = 'none';
+                        answerDisplay.innerHTML = '<span style="color: #ef4444;">请求超时，请检查网络连接或稍后重试</span>';
+                    }
+                }, 30000); // 30秒超时
+                
+                // 创建打字机效果的显示元素
+                const thinkDisplay = document.createElement('pre');
+                thinkDisplay.style.whiteSpace = 'pre-wrap';
+                thinkDisplay.style.wordWrap = 'break-word';
+                thinkDisplay.style.margin = '0';
+                thinkDisplay.style.fontFamily = 'inherit';
+                thinkBody.innerHTML = '';
+                thinkBody.appendChild(thinkDisplay);
+                
+                // answerDisplay 已经在上面创建了，直接使用
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        break;
+                    }
+                    
+                    const chunk = decoder.decode(value);
+                    console.log('Received chunk:', chunk);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') {
+                                continue;
+                            }
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                console.log('Parsed data:', parsed);
+                                
+                                // 收到任何响应都隐藏思考指示器
+                                if (thinkingIndicator.style.display !== 'none') {
+                                    thinkingIndicator.style.display = 'none';
+                                }
+                                
+                                // 处理思考内容的流式输出
+                                if (parsed.type === 'thinking_stream' && parsed.thinking && parsed.thinking.trim()) {
+                                    // 累积思考内容，实现真正的流式效果
+                                    thinkDisplayBuffer += parsed.thinking;
+                                    thinkDisplay.textContent = thinkDisplayBuffer;
+                                    thinkDiv.style.display = 'block';
+                                    
+                                    // 思考内容显示时隐藏思考指示器
+                                    if (thinkingIndicator.style.display !== 'none') {
+                                        thinkingIndicator.style.display = 'none';
+                                    }
+                                    
+                                    console.log('思考内容流式更新，当前长度:', thinkDisplayBuffer.length);
+                                    console.log('思考内容片段:', parsed.thinking.substring(0, 50) + '...');
+                                    
+                                    // 如果是完整的思考内容，完成后默认折叠
+                                    if (parsed.is_complete) {
+                                        thinkBody.style.display = 'none';  // 完成后折叠
+                                        thinkDiv.querySelector('.think-toggle').textContent = '▼';  // 折叠状态
+                                        console.log('思考内容发送完成，已折叠');
+                                    } else {
+                                        // 在流式传输过程中保持展开
+                                        thinkBody.style.display = 'block';
+                                        thinkDiv.querySelector('.think-toggle').textContent = '▲';
+                                    }
+                                }
+                                
+                                // 处理答案内容的流式输出
+                                if (parsed.type === 'message' && parsed.answer && parsed.answer.trim()) {
+                                    // 累积答案内容，实现真正的流式效果
+                                    answerDisplayBuffer += parsed.answer;
+                                    answerDisplay.innerHTML = answerDisplayBuffer.replace(/\n/g, '\u003cbr\u003e');
+                                    
+                                    // 答案内容显示时隐藏思考指示器
+                                    if (thinkingIndicator.style.display !== 'none') {
+                                        thinkingIndicator.style.display = 'none';
+                                    }
+                                    
+                                    // 滚动到底部
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    
+                                    console.log('答案内容流式更新，当前长度:', answerDisplayBuffer.length);
+                                }
+                            } catch (e) {
+                                console.log('JSON parse error:', e);
+                            }
+                        }
+                    }
+                }
+                
+                // 流式接收结束后，确保所有内容显示正确
+                if (thinkDisplayBuffer.trim()) {
+                    thinkDisplay.textContent = thinkDisplayBuffer;
+                    thinkDiv.style.display = 'block';
+                    thinkBody.style.display = 'none';
+                    thinkDiv.querySelector('.think-toggle').textContent = '▼';
+                } else {
+                    thinkDiv.style.display = 'none';
+                }
+                
+                if (answerDisplayBuffer.trim()) {
+                    answerDisplay.innerHTML = answerDisplayBuffer.replace(/\n/g, '\u003cbr\u003e');
+                }
+                
+                // 清除超时定时器
+                clearTimeout(timeout);
+                
+            } catch (error) {
+                // 清除超时定时器
+                clearTimeout(timeout);
+                answerDisplay.innerHTML = '<span style="color: #ef4444;">网络错误，请稍后重试</span>';
+            }
+        }
+
+        // 添加消息到聊天界面
+        function addMessage(content, type, isError = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = type === 'user' ? '我' : 'AI';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            const paragraph = document.createElement('p');
+            paragraph.textContent = content;
+            if (isError) {
+                paragraph.style.color = '#ef4444';
+            }
+            
+            messageContent.appendChild(paragraph);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 添加AI消息（包含think内容）
+        function addAIMessage(answer, think) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai-message';
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = 'AI';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            // 如果有think内容，先显示think
+            if (think) {
+                const thinkDiv = document.createElement('div');
+                thinkDiv.className = 'think-content';
+                thinkDiv.innerHTML = `<strong>思考过程：</strong><pre>${think}</pre>`;
+                messageContent.appendChild(thinkDiv);
+            }
+            
+            // 添加回答内容
+            const paragraph = document.createElement('p');
+            paragraph.innerHTML = answer.replace(/\n/g, '<br>');
+            messageContent.appendChild(paragraph);
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 发送按钮点击事件
+        sendButton.addEventListener('click', sendMessage);
+
+        // 回车发送消息
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 初始化字符计数
+        charCount.textContent = '0 / 4000';
+    </script>
+</body>
+</html>
