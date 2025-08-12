@@ -434,8 +434,21 @@
                 <div class="thinking-text">AI正在思考中...</div>
             `;
             
+            // 添加流式加载指示器
+            const streamLoadingIndicator = document.createElement('div');
+            streamLoadingIndicator.className = 'stream-loading-indicator';
+            streamLoadingIndicator.innerHTML = `
+                <div class="stream-loading-dots">
+                    <div class="stream-loading-dot"></div>
+                    <div class="stream-loading-dot"></div>
+                    <div class="stream-loading-dot"></div>
+                </div>
+                <div class="stream-loading-text">正在接收响应...</div>
+            `;
+            
             messageContent.appendChild(thinkDiv);
             messageContent.appendChild(thinkingIndicator);
+            messageContent.appendChild(streamLoadingIndicator);
             messageContent.appendChild(answerDisplay);
             
             // 添加点击事件
@@ -465,8 +478,9 @@
                     requestData.inputs.url = fileUrls[0];
                 }
                 
-                // 隐藏思考指示器，显示正在接收响应
+                // 初始只显示思考指示器
                 thinkingIndicator.style.display = 'flex';
+                streamLoadingIndicator.style.display = 'none';
                 
                 const response = await fetch('/chat', {
                     method: 'POST',
@@ -493,8 +507,9 @@
                 
                 // 添加超时处理
                 const timeout = setTimeout(() => {
-                    if (thinkingIndicator.style.display !== 'none') {
+                    if (thinkingIndicator.style.display !== 'none' || streamLoadingIndicator.style.display !== 'none') {
                         thinkingIndicator.style.display = 'none';
+                        streamLoadingIndicator.style.display = 'none';
                         answerDisplay.innerHTML = '<span style="color: #ef4444;">请求超时，请检查网络连接或稍后重试</span>';
                     }
                 }, 30000); // 30秒超时
@@ -531,9 +546,10 @@
                                 const parsed = JSON.parse(data);
                                 console.log('Parsed data:', parsed);
                                 
-                                // 收到任何响应都隐藏思考指示器
+                                // 收到任何响应时切换到流式加载指示器
                                 if (thinkingIndicator.style.display !== 'none') {
                                     thinkingIndicator.style.display = 'none';
+                                    streamLoadingIndicator.style.display = 'flex';
                                 }
                                 
                                 // 处理思考内容的流式输出
@@ -543,10 +559,7 @@
                                     thinkDisplay.textContent = thinkDisplayBuffer;
                                     thinkDiv.style.display = 'block';
                                     
-                                    // 思考内容显示时隐藏思考指示器
-                                    if (thinkingIndicator.style.display !== 'none') {
-                                        thinkingIndicator.style.display = 'none';
-                                    }
+                                    // 思考内容显示时确保已切换到流式加载指示器
                                     
                                     console.log('思考内容流式更新，当前长度:', thinkDisplayBuffer.length);
                                     console.log('思考内容片段:', parsed.thinking.substring(0, 50) + '...');
@@ -569,10 +582,7 @@
                                     answerDisplayBuffer += parsed.answer;
                                     answerDisplay.innerHTML = answerDisplayBuffer.replace(/\n/g, '\u003cbr\u003e');
                                     
-                                    // 答案内容显示时隐藏思考指示器
-                                    if (thinkingIndicator.style.display !== 'none') {
-                                        thinkingIndicator.style.display = 'none';
-                                    }
+                                    // 答案内容显示时确保已切换到流式加载指示器
                                     
                                     // 滚动到底部
                                     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -600,12 +610,18 @@
                     answerDisplay.innerHTML = answerDisplayBuffer.replace(/\n/g, '\u003cbr\u003e');
                 }
                 
+                // 隐藏流式加载指示器
+                streamLoadingIndicator.style.display = 'none';
+                
                 // 清除超时定时器
                 clearTimeout(timeout);
                 
             } catch (error) {
                 // 清除超时定时器
                 clearTimeout(timeout);
+                // 隐藏所有加载指示器
+                thinkingIndicator.style.display = 'none';
+                streamLoadingIndicator.style.display = 'none';
                 answerDisplay.innerHTML = '<span style="color: #ef4444;">网络错误，请稍后重试</span>';
             }
         }
