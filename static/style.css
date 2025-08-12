@@ -815,6 +815,61 @@ body {
     letter-spacing: 0.5px;
 }
 
+/* 流式加载指示器 */
+.stream-loading-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.stream-loading-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.stream-loading-dot {
+    width: 6px;
+    height: 6px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    border-radius: 50%;
+    animation: streamLoadingPulse 1.2s infinite ease-in-out;
+}
+
+.stream-loading-dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.stream-loading-dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.stream-loading-dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes streamLoadingPulse {
+    0%, 70%, 100% {
+        transform: scale(0.7);
+        opacity: 0.4;
+    }
+    35% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.stream-loading-text {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;
